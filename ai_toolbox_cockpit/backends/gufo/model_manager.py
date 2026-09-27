@@ -74,7 +74,8 @@ def resolved_files(model: dict) -> dict:
     speculation = model.get("speculation")
     sidecar = (
         _find_file(
-            speculation["path"], speculation["size_bytes"], model["directory"]
+            speculation["path"], speculation["size_bytes"],
+            speculation.get("directory", model["directory"]),
         )
         if speculation else None
     )
@@ -117,21 +118,23 @@ def model_status(model: dict) -> str:
 def get_download_commands(model: dict, directory: Path) -> list[list[str]]:
     executable = Path(sys.executable).with_name("hf")
     hf = str(executable) if executable.is_file() else (shutil.which("hf") or "hf")
-    groups: dict[tuple[str, str], list[str]] = defaultdict(list)
-    groups[(model["repo"], model["revision"])].extend(
+    groups: dict[tuple[str, str, str], list[str]] = defaultdict(list)
+    groups[(model["repo"], model["revision"], model["directory"])].extend(
         item["path"] for item in model["files"]
     )
     speculation = model.get("speculation")
     if speculation:
-        groups[(speculation["repo"], speculation["revision"])].append(
+        groups[(
+            speculation["repo"], speculation["revision"],
+            speculation.get("directory", model["directory"]),
+        )].append(
             speculation["path"]
         )
-    destination = directory.expanduser().resolve() / model["directory"]
     return [
         [
             hf, "download", repo, *paths,
             "--revision", revision,
-            "--local-dir", str(destination),
+            "--local-dir", str(directory.expanduser().resolve() / target_directory),
         ]
-        for (repo, revision), paths in groups.items()
+        for (repo, revision, target_directory), paths in groups.items()
     ]

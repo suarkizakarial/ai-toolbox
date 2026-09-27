@@ -12,7 +12,8 @@ from .model_manager import get_model, resolved_files
 CONTAINER_NAME = "gufo-cockpit-server"
 _OWNED_OPTIONS = {
     "--host", "--port", "--sessions", "--model", "--context", "--max-tokens",
-    "--served-model-name", "--speculative", "--mtp-model", "--dspark-model",
+    "--served-model-name", "--speculative", "--mtp-model", "--dflash-model",
+    "--dspark-model",
     "--draft-tokens", "--think", "--reasoning-effort", "--max-pending-per-client",
 }
 
@@ -131,6 +132,12 @@ def build_server_cmd(
         command.extend([
             "--speculative", "mtp",
             "--mtp-model", container_sidecar,
+            "--draft-tokens", str(draft_tokens),
+        ])
+    elif speculation_mode == "dflash2":
+        command.extend([
+            "--speculative", "dflash2",
+            "--dflash-model", container_sidecar,
             "--draft-tokens", str(draft_tokens),
         ])
     elif speculation_mode == "dspark":

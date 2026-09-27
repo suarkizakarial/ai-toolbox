@@ -37,7 +37,8 @@ class GufoServerPanel(BackendServerPanel):
             yield Static(
                 "Experimental Strix Halo backend for the source-pinned Gufo ROCm 10.0 image. "
                 "The curated profiles cover Qwen3.8 Flash Next Q4 with optional MTP-7, "
-                "Qwen3.8 27B Q4, and DeepSeek V4 Flash 0731 with optional DSpark.",
+                "Qwen3.8 27B Q4 with optional DFlash2-7, and DeepSeek V4 Flash 0731 "
+                "with optional DSpark.",
                 classes="panel-copy",
             )
             for control, label in (
@@ -54,7 +55,7 @@ class GufoServerPanel(BackendServerPanel):
                 (("host", "Host", "127.0.0.1"), ("port", "Port", "18080")),
                 (("context", "Context", "262144"), ("sessions", "Concurrent sessions", "1")),
                 (("max-tokens", "Maximum output", "32768"), ("max-pending-per-client", "Queued requests / client", "4")),
-                (("draft-tokens", "MTP draft cap", "7"),),
+                (("draft-tokens", "Speculative draft cap", "7"),),
             ):
                 with Horizontal(classes="compact-fields"):
                     for control, label, default in fields:
@@ -146,7 +147,9 @@ class GufoServerPanel(BackendServerPanel):
         ids = {entry["id"] for entry in models}
         preference = settings.get("speculation_mode")
         self._next_speculation_preference = (
-            str(preference) if preference in {"baseline", "mtp", "dspark"} else None
+            str(preference)
+            if preference in {"baseline", "mtp", "dflash2", "dspark"}
+            else None
         )
         select.value = previous if previous in ids else next(
             entry["id"] for entry in models if entry.get("recommended")
@@ -163,7 +166,7 @@ class GufoServerPanel(BackendServerPanel):
         default = "baseline"
         if speculation:
             mode = speculation["mode"]
-            label = "MTP" if mode == "mtp" else "DSpark"
+            label = {"mtp": "MTP", "dflash2": "DFlash2", "dspark": "DSpark"}[mode]
             sidecar_ready = resolved_files(model)["sidecar"] is not None
             options.append((
                 f"{label} ({'sidecar ready' if sidecar_ready else 'sidecar missing'})",

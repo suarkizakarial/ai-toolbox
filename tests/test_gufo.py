@@ -6,7 +6,7 @@ from unittest.mock import patch
 from textual.widgets import Input
 
 from ai_toolbox_cockpit.app import AiToolboxCockpitApp
-from ai_toolbox_cockpit.backends.gufo.model_manager import resolved_files
+from ai_toolbox_cockpit.backends.gufo.model_manager import get_download_commands, resolved_files
 from ai_toolbox_cockpit.backends.gufo.server_runner import build_server_cmd
 from ai_toolbox_cockpit.catalog import load_model_catalog, load_toolbox_catalog
 from ai_toolbox_cockpit.widgets import SearchableSelect
@@ -75,6 +75,20 @@ class GufoModelDiscoveryTests(unittest.TestCase):
         self.assertEqual(resolved["model"], target)
         self.assertEqual(resolved["sidecar"], sidecar)
 
+    def test_downloads_sidecar_repository_to_its_own_directory(self) -> None:
+        model = {
+            "repo": "example/target", "revision": "target-revision",
+            "directory": "target-dir", "files": [{"path": "target.gguf"}],
+            "speculation": {
+                "repo": "example/draft", "revision": "draft-revision",
+                "directory": "draft-dir", "path": "draft.gguf",
+            },
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            commands = get_download_commands(model, Path(directory))
+            destinations = {command[command.index("--local-dir") + 1] for command in commands}
+        self.assertEqual(destinations, {f"{directory}/target-dir", f"{directory}/draft-dir"})
+
 
 class GufoServerPanelTests(unittest.IsolatedAsyncioTestCase):
     async def test_server_model_profiles_are_populated_after_platform_mount(self) -> None:
@@ -137,6 +151,11 @@ class GufoServerPanelTests(unittest.IsolatedAsyncioTestCase):
                     app.query_one("#gufo-max-pending-per-client", Input).value,
                     "4",
                 )
+
+                model.value = "gufo-qwen38-27b-ud-q4-k-xl"
+                await pilot.pause()
+                self.assertEqual(profile.value, "dflash2")
+                self.assertIn("DFlash2", profile._options[1][0])
 
 
 class GufoCommandTests(unittest.TestCase):
@@ -258,6 +277,39 @@ class GufoCommandTests(unittest.TestCase):
                 )
         self.assertEqual(command[command.index("--dspark-model") + 1], "/models/speculation/dspark.gguf")
         self.assertNotIn("--speculative", command)
+
+    def test_dflash2_uses_native_gufo_sidecar_flag_and_draft_cap(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "target.gguf"
+            target.touch()
+            sidecar_root = root / "draft"
+            sidecar_root.mkdir()
+            sidecar = sidecar_root / "dflash.gguf"
+            sidecar.touch()
+            model = {
+                "model_path": target.name,
+                "served_model_name": "qwen38-27b",
+                "context_size": 262144,
+                "files": [{"path": target.name, "size_bytes": 0}],
+                "speculation": {
+                    "mode": "dflash2", "path": sidecar.name,
+                    "size_bytes": 0, "draft_tokens": 7,
+                },
+            }
+            resolved = {"targets": {target.name: target}, "model": target, "sidecar": sidecar}
+            with (
+                patch("ai_toolbox_cockpit.backends.gufo.server_runner.get_model", return_value=model),
+                patch("ai_toolbox_cockpit.backends.gufo.server_runner.resolved_files", return_value=resolved),
+            ):
+                command = build_server_cmd(
+                    engine="podman", image="docker.io/example/gufo:test",
+                    engine_args=ROCM_ARGS, platform_id="strix-halo", model_id="qwen",
+                    speculation_mode="dflash2", draft_tokens=7,
+                )
+        self.assertEqual(command[command.index("--speculative") + 1], "dflash2")
+        self.assertEqual(command[command.index("--dflash-model") + 1], "/models/speculation/dflash.gguf")
+        self.assertEqual(command[command.index("--draft-tokens") + 1], "7")
 
     def test_rejects_owned_options_in_extra_arguments(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
