@@ -196,6 +196,11 @@ def _validate_model_entry(backend_id: str, entry: dict[str, Any], context: str) 
     elif backend_id == "ds4":
         for key in ("repo", "filename", "family"):
             _required_string(entry, key, context)
+        revision = entry.get("revision")
+        if revision is not None:
+            revision = _required_string(entry, "revision", context)
+            if not re.fullmatch(r"[0-9a-f]{40}", revision):
+                raise CatalogError(f"{context}.revision must pin a full commit SHA")
         artifact_role = entry.get("artifact_role", "main")
         if artifact_role not in {"main", "vision_encoder", "dspark_support", "mtp"}:
             raise CatalogError(f"{context}.artifact_role is unsupported")

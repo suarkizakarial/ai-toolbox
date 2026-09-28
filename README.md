@@ -96,7 +96,7 @@ Every server endpoint has its own source file and pure command builder under `ai
 | Backend | Controls and defaults |
 | --- | --- |
 | llama.cpp | Local GGUF, image/engine, context, GPU layers, load mode, flash attention, KV-cache type, API key, GPU visibility, inference profiles, vision projector, MTP, and extra `llama-server` arguments |
-| DS4 | Exact local GGUF, context, graph/distributed prefill, disk KV cache, SSD expert streaming, embedded MTP or external MTP path, compatible vision encoder, standalone/coordinator/worker roles, and tensor-parallel TCP/RoCE transport for DeepSeek V4.1 Flash Q2 |
+| DS4 | Exact local GGUF, context, graph/distributed prefill, disk KV cache, SSD expert streaming, embedded MTP, external MTP or DSpark support model, compatible vision encoder, standalone/coordinator/worker roles, and tensor-parallel TCP/RoCE transport for DeepSeek V4.1 Flash Q2 |
 | vLLM | Hugging Face repository, tensor parallelism, concurrency, context, GPU utilisation, dtype, eager mode, API key, attention backend, and persistent HF/vLLM/Triton/AITER caches |
 | ComfyUI | Model/input/output/user paths, host/port, BF16 VAE, GPU-only mode, mmap/smart-memory behavior, and cache mode |
 | Gufo (experimental; Strix Halo only) | Revision-pinned Qwen3.8 Flash Next Q4, Qwen3.8 27B Q4, and DeepSeek V4 Flash 0731 GGUF bundles; MTP or DSpark selected by default when its sidecar is ready, with an explicit disabled baseline; context, concurrent sessions, output limit, thinking effort (High by default), per-client queue limit, and localhost binding |
@@ -182,6 +182,16 @@ model is catalogued with the tested 262144 context, the matching
 model; the compatible vision encoder is offered automatically and the API
 defaults to port `8000`.
 
+The Models panel also offers the revision-pinned 7.42 GiB native-MXFP4
+`DeepSeek-V4.1-Flash-DSpark-MXFP4.gguf` support model. Once downloaded, Server
+Mode enables DSpark by default for V4.1 Q2, selects the matching sidecar and
+leaves confidence on **Auto**, reproducing the qualified command. DwarfStar
+currently resolves Auto to `0.7` on ROCm; this is its tested backend default,
+not a universal threshold prescribed by DeepSeek. Enter a value from 0 to 1 to
+override it.
+The support model fixes the draft cap at five tokens and ds4 tunes its adaptive
+scheduler automatically, so `--mtp-draft` does not control this DSpark path.
+
 - **Standalone:** SSD streaming starts enabled with the `92GB` cache. Clear it to
   keep the experts fully resident when the host has enough RAM.
 - **Coordinator/Worker:** selecting a distributed role reveals the tensor-parallel
@@ -191,6 +201,9 @@ defaults to port `8000`.
   Worker role runs the `ds4` CLI instead of the toolbox default `ds4-server`; it
   serves no HTTP API, so host and port are not passed and those fields are
   disabled while the worker is selected. The coordinator keeps `ds4-server`.
+  DSpark remains available for the resident tensor-parallel path and passes its
+  support model and confidence setting to both ranks. Bounded replay remains a
+  separate opt-in setting.
 - **InfiniBand:** every DwarfStar container gets the host's InfiniBand devices
   automatically when `/dev/infiniband` exists. Podman receives the device
   directory with the `rdma` group and an unlimited memlock ulimit; Docker

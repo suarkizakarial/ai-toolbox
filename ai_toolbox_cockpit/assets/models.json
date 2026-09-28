@@ -935,6 +935,18 @@
           "id": "ds4-deepseek-v4-1-flash-vision-gguf"
         },
         {
+          "name": "DeepSeek V4.1 Flash — DSpark MXFP4 support (~7.42 GiB)",
+          "family": "deepseek-v4.1-flash",
+          "repo": "kernelpool/DeepSeek-V4.1-Flash-MXFP4-GGUF",
+          "revision": "22a073e51781f43e6814885bb4b3cbe540f175ef",
+          "filename": "DeepSeek-V4.1-Flash-DSpark-MXFP4.gguf",
+          "artifact_role": "dspark_support",
+          "size_gb": 7.966294016,
+          "recommended": false,
+          "sha256": "7a2217ca6ef27cbce4ac934d8b6f59f2f6158ec288527bbe72b86dcbed95d4b5",
+          "id": "ds4-deepseek-v4-1-flash-dspark-mxfp4-gguf"
+        },
+        {
           "name": "Qwen 3.8 Flash Next — Q2 (~137.1 GiB)",
           "family": "qwen3.8-flash-next",
           "repo": "antirez/qwen3.8-flash-next-gguf",
@@ -986,7 +998,13 @@
           "glm-5.3-flash": {
             "standalone_ctx": 262144
           },
-          "deepseek-v4.1-flash": {},
+          "deepseek-v4.1-flash": {
+            "dspark_enabled": true,
+            "dspark_support_filename": "DeepSeek-V4.1-Flash-DSpark-MXFP4.gguf",
+            "dspark_confidence": 0.7,
+            "dspark_confidence_auto": true,
+            "dspark_distributed": true
+          },
           "qwen3.8-flash-next": {}
         },
         "default_server_defaults": {}

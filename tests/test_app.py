@@ -1201,6 +1201,54 @@ class AppMountTests(IsolatedAsyncioTestCase):
                 self.assertEqual(confidence_label.region.x, confidence_control.region.x)
                 self.assertLess(confidence_label.region.y, confidence_control.region.y)
 
+    async def test_ds4_deepseek_v41_dspark_remains_available_for_tensor_parallel(self) -> None:
+        target = {
+            "name": "DeepSeek-V4.1-Flash-Q2.gguf",
+            "path": "/models/DeepSeek-V4.1-Flash-Q2.gguf",
+        }
+        support = {
+            "name": "DeepSeek-V4.1-Flash-DSpark-MXFP4.gguf",
+            "path": "/models/DeepSeek-V4.1-Flash-DSpark-MXFP4.gguf",
+        }
+        with (
+            patch("ai_toolbox_cockpit.views.toolboxes.ToolboxesView.refresh_installed", return_value=None),
+            patch("ai_toolbox_cockpit.app.AiToolboxCockpitApp.check_application_update", return_value=None),
+            patch("ai_toolbox_cockpit.app.available_update", return_value=None),
+            patch("ai_toolbox_cockpit.backends.llama_cpp.server.scan_local_models", return_value=[]),
+            patch("ai_toolbox_cockpit.backends.ds4.server.scan_local_models", return_value=[target, support]),
+        ):
+            app = AiToolboxCockpitApp()
+            async with app.run_test(size=(200, 60)) as pilot:
+                app.query_one(TabbedContent).active = "tab-servers"
+                app.query_one("#server-backend-select", SearchableSelect).value = "ds4"
+                await pilot.pause()
+
+                enabled = app.query_one("#ds4-dspark-enabled", Checkbox)
+                self.assertTrue(enabled.value)
+                self.assertEqual(
+                    app.query_one("#ds4-dspark-model", SearchableSelect).value,
+                    support["path"],
+                )
+                confidence = app.query_one("#ds4-dspark-confidence", Input)
+                self.assertEqual(confidence.value, "")
+                self.assertEqual(confidence.placeholder, "Auto")
+                self.assertIn(
+                    "fixed five-token draft cap",
+                    app.query_one("#ds4-dspark-note", Static).render().plain,
+                )
+                self.assertFalse(app.query_one("#ds4-ssd-enabled", Checkbox).value)
+
+                app.query_one("#ds4-role", SearchableSelect).value = "Coordinator"
+                await pilot.pause()
+
+                self.assertTrue(enabled.value)
+                self.assertFalse(enabled.disabled)
+                self.assertTrue(app.query_one("#ds4-tensor-parallel", Checkbox).value)
+                self.assertEqual(
+                    app.query_one("#ds4-dspark-model", SearchableSelect).value,
+                    support["path"],
+                )
+
     async def test_ds4_glm53_embedded_mtp_and_vision_reach_start_command(self) -> None:
         from ai_toolbox_cockpit.backends.ds4.server import Ds4ServerPanel
 
