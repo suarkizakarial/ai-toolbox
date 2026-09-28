@@ -159,6 +159,7 @@ class HalogenServerPanel(BackendServerPanel):
             "No direct container network; selected bundle files mounted read-only.\n"
             f"Host API relay: {values['host']}:{values['port']} -> container loopback.\n\n"
             f"{shlex.join(self._pending_command)}", yes_text="Start",
+            copy_text=shlex.join(self._pending_command),
         ), self._start_confirmed)
 
     def _start_confirmed(self, confirmed: bool) -> None:

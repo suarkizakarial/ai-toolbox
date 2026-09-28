@@ -363,7 +363,11 @@ class VllmServerPanel(BackendServerPanel):
         reset_text = "\n\nThe vLLM, Triton, and AITER compiled cache contents will be permanently removed first." if reset else ""
         preview = redact_command(self._pending_command)
         self.app.push_screen(
-            ConfirmModal(f"Start vLLM server?{reset_text}\n\n{shlex.join(preview)}", yes_text="Start"),
+            ConfirmModal(
+                f"Start vLLM server?{reset_text}\n\n{shlex.join(preview)}",
+                yes_text="Start",
+                copy_text=shlex.join(preview),
+            ),
             self._start_confirmed,
         )
 

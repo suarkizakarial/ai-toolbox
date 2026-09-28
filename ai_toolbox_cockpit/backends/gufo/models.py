@@ -152,6 +152,7 @@ class GufoModelPanel(BackendModelPanel):
                 "Existing complete files are reused.\n\n"
                 f"{note}\n\n{rendered}",
                 yes_text="Download",
+                copy_text=rendered,
             ),
             self._download_confirmed,
         )

@@ -196,7 +196,8 @@ class R9vModelPanel(BackendModelPanel):
         label = {"download": "Download", "prepare": "Prepare PLE", "verify": "Verify SHA256"}[action]
         self.app.push_screen(ConfirmModal(
             f"{label}: {package['name']}\nPackage: {paths['models_dir']}\nPLE: {paths['ple_dir']}\n"
-            f"{license_note}\n{note}\n\n{shlex.join(self._pending['command'])}", yes_text=label), self._operation_confirmed)
+            f"{license_note}\n{note}\n\n{shlex.join(self._pending['command'])}", yes_text=label,
+            copy_text=shlex.join(self._pending["command"])), self._operation_confirmed)
 
     def _operation_confirmed(self, confirmed: bool) -> None:
         if not confirmed:

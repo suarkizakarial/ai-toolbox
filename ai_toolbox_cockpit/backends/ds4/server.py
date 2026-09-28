@@ -635,7 +635,11 @@ class Ds4ServerPanel(BackendServerPanel):
             peer_default_port=str(self._model_defaults.get("distributed_port", 8081)),
         )
         self.app.push_screen(
-            ConfirmModal(f"Start DwarfStar (ds4) server?\n\n{shlex.join(self._pending_command)}", yes_text="Start"),
+            ConfirmModal(
+                f"Start DwarfStar (ds4) server?\n\n{shlex.join(self._pending_command)}",
+                yes_text="Start",
+                copy_text=shlex.join(self._pending_command),
+            ),
             self._start_confirmed,
         )
 

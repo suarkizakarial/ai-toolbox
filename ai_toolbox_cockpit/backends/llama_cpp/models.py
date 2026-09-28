@@ -230,7 +230,11 @@ class LlamaCppModelPanel(BackendModelPanel):
         if capacity_note:
             prompt = f"{prompt}\n\n{capacity_note}"
         self.app.push_screen(
-            ConfirmModal(f"{prompt}\n\n{shlex.join(command)}", yes_text="Download Again" if installed else "Download"),
+            ConfirmModal(
+                f"{prompt}\n\n{shlex.join(command)}",
+                yes_text="Download Again" if installed else "Download",
+                copy_text=shlex.join(command),
+            ),
             lambda confirmed: self._download_quant(quant) if confirmed else None,
         )
 

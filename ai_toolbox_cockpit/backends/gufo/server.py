@@ -246,6 +246,7 @@ class GufoServerPanel(BackendServerPanel):
                 "Start the experimental Gufo server?\n\n"
                 f"{shlex.join(self._pending_command)}",
                 yes_text="Start",
+                copy_text=shlex.join(self._pending_command),
             ),
             self._start_confirmed,
         )

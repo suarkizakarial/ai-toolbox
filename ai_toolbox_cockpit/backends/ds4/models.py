@@ -172,10 +172,12 @@ class Ds4ModelPanel(BackendModelPanel):
         )
         if capacity_note:
             prompt = f"{prompt}\n\n{capacity_note}"
+        command = shlex.join(get_download_cmd(repo, filename, self._pending_revision))
         self.app.push_screen(
             ConfirmModal(
-                f"{prompt}\n\n{shlex.join(get_download_cmd(repo, filename, self._pending_revision))}",
+                f"{prompt}\n\n{command}",
                 yes_text="Download Again" if installed else "Download",
+                copy_text=command,
             ),
             self._download_confirmed,
         )

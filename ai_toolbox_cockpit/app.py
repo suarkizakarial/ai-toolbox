@@ -470,6 +470,7 @@ class AiToolboxCockpitApp(App):
             ConfirmModal(
                 f"Upgrade AI Toolbox Cockpit to v{self._available_version}?\n\n{command}",
                 yes_text="Upgrade",
+                copy_text=command,
             ),
             self._application_update_confirmed,
         )

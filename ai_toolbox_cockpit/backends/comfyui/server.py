@@ -181,7 +181,11 @@ class ComfyUiServerPanel(BackendServerPanel):
             self.notify(str(error), severity="error")
             return
         self.app.push_screen(
-            ConfirmModal(f"Start ComfyUI?\n\n{shlex.join(self._pending_command)}", yes_text="Start"),
+            ConfirmModal(
+                f"Start ComfyUI?\n\n{shlex.join(self._pending_command)}",
+                yes_text="Start",
+                copy_text=shlex.join(self._pending_command),
+            ),
             self._start_confirmed,
         )
 

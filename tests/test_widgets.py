@@ -1,9 +1,14 @@
 from unittest import IsolatedAsyncioTestCase
 
 from textual.app import App, ComposeResult
-from textual.widgets import Checkbox, Input, Static
+from textual.widgets import Button, Checkbox, Input, Static
 
-from ai_toolbox_cockpit.widgets import HfTokenModal, SearchableSelect, selection_marker
+from ai_toolbox_cockpit.widgets import (
+    ConfirmModal,
+    HfTokenModal,
+    SearchableSelect,
+    selection_marker,
+)
 
 
 class _SelectorApp(App):
@@ -27,6 +32,23 @@ class _HfTokenApp(App):
         self.result = result
 
 
+class _ConfirmApp(App):
+    result: bool | None = None
+
+    def __init__(self, copy_text: str | None) -> None:
+        super().__init__()
+        self.copy_text = copy_text
+
+    def on_mount(self) -> None:
+        self.push_screen(
+            ConfirmModal("Run this command?", copy_text=self.copy_text),
+            self._confirmed,
+        )
+
+    def _confirmed(self, result: bool) -> None:
+        self.result = result
+
+
 class SearchableSelectTests(IsolatedAsyncioTestCase):
     async def test_keyboard_opens_and_selects_at_narrow_terminal_size(self) -> None:
         app = _SelectorApp()
@@ -41,6 +63,32 @@ class SelectionMarkerTests(IsolatedAsyncioTestCase):
     async def test_markers_are_literal_rich_text(self) -> None:
         self.assertEqual(selection_marker(False).plain, "[ ]")
         self.assertEqual(selection_marker(True).plain, "[x]")
+
+
+class ConfirmModalTests(IsolatedAsyncioTestCase):
+    async def test_copy_command_button_copies_without_dismissing_dialog(self) -> None:
+        command = "podman run example/image:latest"
+        app = _ConfirmApp(command)
+        async with app.run_test(size=(100, 30)) as pilot:
+            copy_button = app.screen.query_one("#btn_copy", Button)
+            self.assertEqual(str(copy_button.label), "Copy command")
+
+            await pilot.click("#btn_copy")
+            await pilot.pause()
+
+            self.assertEqual(app.clipboard, command)
+            self.assertIsInstance(app.screen, ConfirmModal)
+            self.assertIsNone(app.result)
+
+            await pilot.click("#btn_no")
+            await pilot.pause()
+
+        self.assertFalse(app.result)
+
+    async def test_copy_button_is_omitted_without_command_text(self) -> None:
+        app = _ConfirmApp(None)
+        async with app.run_test(size=(100, 30)):
+            self.assertEqual(len(app.screen.query("#btn_copy")), 0)
 
 
 class HfTokenModalTests(IsolatedAsyncioTestCase):

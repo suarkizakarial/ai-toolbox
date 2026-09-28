@@ -380,6 +380,7 @@ class ToolboxesView(Vertical):
                    if self._pending_image_commands else "")
                 + f"\n\nCommands:\n{preview}",
                 yes_text="Continue",
+                copy_text=preview,
             ),
             self._create_update_confirmed,
         )
@@ -490,7 +491,11 @@ class ToolboxesView(Vertical):
             commands.append(build_delete_command(toolbox_runtime, toolbox.container_name))
         preview = "\n".join(shlex.join(command) for command in commands)
         self.app.push_screen(
-            ConfirmModal(f"Delete these toolboxes / server images?\n{names}\n\nCommands:\n{preview}", yes_text="Delete"),
+            ConfirmModal(
+                f"Delete these toolboxes / server images?\n{names}\n\nCommands:\n{preview}",
+                yes_text="Delete",
+                copy_text=preview,
+            ),
             self._delete_confirmed,
         )
 

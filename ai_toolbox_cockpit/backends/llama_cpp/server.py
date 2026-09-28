@@ -714,6 +714,7 @@ class LlamaCppServerPanel(BackendServerPanel):
             ConfirmModal(
                 f"Start llama.cpp server?{warning_text}\n\n{shlex.join(preview)}",
                 yes_text="Start",
+                copy_text=shlex.join(preview),
             ),
             self._start_confirmed,
         )

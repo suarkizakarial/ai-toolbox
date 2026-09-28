@@ -170,9 +170,10 @@ class R9vServerPanel(BackendServerPanel):
         except (ValueError, OSError) as error:
             self.notify(str(error), severity="error", timeout=10)
             return
+        preview = shlex.join(redact_command(self._pending_command))
         self.app.push_screen(ConfirmModal(
             "Start R9V on two R9700 GPUs? Ensure both GPUs are free.\n\n"
-            + shlex.join(redact_command(self._pending_command)), yes_text="Start"), self._start_confirmed)
+            + preview, yes_text="Start", copy_text=preview), self._start_confirmed)
 
     def _start_confirmed(self, confirmed: bool) -> None:
         if not confirmed:

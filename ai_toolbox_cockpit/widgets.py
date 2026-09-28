@@ -92,23 +92,36 @@ class SingleClickDataTable(DataTable):
 
 class ConfirmModal(ModalScreen[bool]):
     """A modal dialog that asks a Yes/No question."""
-    def __init__(self, message: str, yes_text: str = "Yes", no_text: str = "No", id: str = None):
+    def __init__(
+        self,
+        message: str,
+        yes_text: str = "Yes",
+        no_text: str = "No",
+        id: str = None,
+        copy_text: str | None = None,
+    ):
         super().__init__(id=id)
         self.message = message
         self.yes_text = yes_text
         self.no_text = no_text
+        self.copy_text = copy_text
 
     def compose(self) -> ComposeResult:
         with Vertical(id="confirm_dialog"):
             yield Label(self.message, id="confirm_message")
             with Horizontal(id="confirm_buttons"):
                 yield Button(self.yes_text, variant="error", id="btn_yes")
+                if self.copy_text is not None:
+                    yield Button("Copy command", id="btn_copy")
                 yield Button(self.no_text, variant="primary", id="btn_no")
 
     @on(Button.Pressed)
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn_yes":
             self.dismiss(True)
+        elif event.button.id == "btn_copy":
+            self.app.copy_to_clipboard(self.copy_text or "")
+            self.notify("Command copied to clipboard.")
         else:
             self.dismiss(False)
 

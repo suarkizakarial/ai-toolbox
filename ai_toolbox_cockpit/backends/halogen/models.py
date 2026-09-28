@@ -128,6 +128,7 @@ class HalogenModelPanel(BackendModelPanel):
                 f"Download / repair {bundle['name']} into {directory}?\n"
                 f"Includes checkpoint, selected overlay and tokenizer. Existing files are reused.\n\n"
                 f"{note}\n\n{shlex.join(command)}", yes_text="Download",
+                copy_text=shlex.join(command),
             ), self._download_confirmed,
         )
 
