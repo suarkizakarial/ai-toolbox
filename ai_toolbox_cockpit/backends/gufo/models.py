@@ -40,11 +40,13 @@ class GufoModelPanel(BackendModelPanel):
         self._hf_token_prompted = False
         self._pending_model: dict = {}
         self._pending_directory = Path()
+        self._pending_vision = False
 
     def compose(self) -> ComposeResult:
         yield Static(
-            "Curated Gufo profiles use the exact GGUF targets and optional MTP or DSpark "
-            "sidecars validated on Strix Halo. File-size checks reuse compatible files under "
+            "Curated Gufo profiles use the exact GGUF targets and MTP, DFlash2 or DSpark "
+            "sidecars validated on Strix Halo. Qwen profiles offer optional BF16 vision projectors. "
+            "File-size checks reuse compatible files under "
             "the configured model directory and ~/ds4.",
             classes="panel-copy",
         )
@@ -54,6 +56,9 @@ class GufoModelPanel(BackendModelPanel):
                 yield Label("Model / quant", id="gufo-download-model-label", classes="inline-label")
                 yield SearchableSelect("Select Gufo model profile", id="gufo-download-model")
                 yield Button("Download / Repair", id="gufo-download", variant="success")
+            with Horizontal(classes="inline-row"):
+                yield Label("Image support", id="gufo-download-vision-label", classes="inline-label")
+                yield SearchableSelect("Select image support", id="gufo-download-vision")
         with Vertical(classes="model-zone"):
             yield Label("Local Gufo files", classes="zone-title")
             with Horizontal(classes="inline-row"):
@@ -92,6 +97,21 @@ class GufoModelPanel(BackendModelPanel):
         self.refresh_inventory()
         self.app.refresh_server_model_inventory("gufo")
 
+    @on(SearchableSelect.Changed, "#gufo-download-model")
+    def download_model_changed(self, event: SearchableSelect.Changed) -> None:
+        try:
+            model = get_model(event.value)
+        except ValueError:
+            return
+        select = self.query_one("#gufo-download-vision", SearchableSelect)
+        previous = select.value
+        options = [("Text only", "off")]
+        if model.get("vision"):
+            options.append((f"Text + images (+{model['vision']['size_bytes'] / 1024**2:.0f} MiB)", "on"))
+        select.set_options(options)
+        select.disabled = not model.get("vision")
+        select.value = previous if previous in {v for _, v in options} else "off"
+
     @on(Button.Pressed, "#gufo-save-models-dir")
     def save_path_pressed(self) -> None:
         if save_models_dir(self.query_one("#gufo-models-dir", Input).value.strip()):
@@ -110,6 +130,7 @@ class GufoModelPanel(BackendModelPanel):
             self._pending_model = get_model(
                 self.query_one("#gufo-download-model", SearchableSelect).value
             )
+            self._pending_vision = self.query_one("#gufo-download-vision", SearchableSelect).value == "on"
             value = self.query_one("#gufo-models-dir", Input).value.strip()
             if not value:
                 raise ValueError("Enter a model directory.")
@@ -134,21 +155,25 @@ class GufoModelPanel(BackendModelPanel):
 
     def _confirm_download(self) -> None:
         model, directory = self._pending_model, self._pending_directory
-        missing = missing_files(model)
+        missing = missing_files(model, include_vision=self._pending_vision)
         required = sum(
             item["size_bytes"] for item in model["files"] if item["path"] in missing
         )
         speculation = model.get("speculation")
         if speculation and speculation["path"] in missing:
             required += speculation["size_bytes"]
+        vision = model.get("vision")
+        if self._pending_vision and vision and vision["path"] in missing:
+            required += vision["size_bytes"]
         space = disk_space_for_path(directory)
         note = download_space_note(required, space.free if space else None)
-        commands = get_download_commands(model, directory)
+        commands = get_download_commands(model, directory, include_vision=self._pending_vision, missing_only=True)
         rendered = "\n".join(shlex.join(command) for command in commands)
         self.app.push_screen(
             ConfirmModal(
                 f"Download / repair {model['name']} into {directory / model['directory']}?\n"
                 "Pinned target files and the tested speculative sidecar are downloaded together. "
+                "The matching vision projector is included when Text + images is selected. "
                 "Existing complete files are reused.\n\n"
                 f"{note}\n\n{rendered}",
                 yes_text="Download",
@@ -167,7 +192,7 @@ class GufoModelPanel(BackendModelPanel):
         failed = False
         with self.app.suspend():
             try:
-                for command in get_download_commands(model, directory):
+                for command in get_download_commands(model, directory, include_vision=self._pending_vision, missing_only=True):
                     subprocess.run(
                         command,
                         env=huggingface_environment(self._hf_token),
@@ -184,7 +209,7 @@ class GufoModelPanel(BackendModelPanel):
                 "Download interrupted or failed; Download / Repair resumes it.",
                 severity="warning",
             )
-        elif missing_files(model):
+        elif missing_files(model, include_vision=self._pending_vision):
             self.notify("Download finished but required files are missing or incomplete.", severity="error")
         else:
             self.notify("Gufo model bundle download complete.")

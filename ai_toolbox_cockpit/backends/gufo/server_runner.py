@@ -13,7 +13,7 @@ CONTAINER_NAME = "gufo-cockpit-server"
 _OWNED_OPTIONS = {
     "--host", "--port", "--sessions", "--model", "--context", "--max-tokens",
     "--served-model-name", "--speculative", "--mtp-model", "--dflash-model",
-    "--dspark-model",
+    "--dspark-model", "--mmproj",
     "--draft-tokens", "--think", "--reasoning-effort", "--max-pending-per-client",
 }
 
@@ -33,7 +33,7 @@ def build_server_cmd(
     host: str = "127.0.0.1", port: int = 18080, context_size: int | None = None,
     sessions: int = 1, max_tokens: int = 32768, draft_tokens: int | None = None,
     thinking_effort: str = "high", max_pending_per_client: int = 4,
-    extra_args: str = "",
+    vision_enabled: bool = False, extra_args: str = "",
 ) -> list[str]:
     if platform_id != "strix-halo":
         raise ValueError("Gufo supports Strix Halo (gfx1151) only.")
@@ -92,23 +92,38 @@ def build_server_cmd(
     if draft_tokens is not None and not 1 <= draft_tokens <= 7:
         raise ValueError("Gufo draft tokens must be between 1 and 7.")
 
+    projector_path = None
+    if vision_enabled:
+        if not model.get("vision"):
+            raise ValueError("The selected Gufo model has no vision profile.")
+        projector = resolved.get("vision")
+        if projector is None:
+            raise ValueError("Download or repair the matching BF16 vision projector first.")
+        projector_path = Path(projector)
+
     command = [engine, "run", "--rm", "-it", "--name", CONTAINER_NAME]
     command.extend(upgrade_groups_for_podman(engine, list(engine_args)))
     command.append("--ipc=host")
     if engine == "podman":
         command.extend(["--security-opt", "label=disable", "--userns=keep-id"])
     port_mapping = f"{port}:{port}" if host == "0.0.0.0" else f"{host}:{port}:{port}"
-    command.extend([
-        "-p", port_mapping,
-        "-v", f"{target_parent}:/models/target:ro",
-    ])
+    command.extend(["-p", port_mapping])
+    if model.get("vision"):
+        # Gufo discovers projectors beside the target. Expose only target shards
+        # so text-only remains explicit even when a projector exists locally.
+        for path in target_paths:
+            command.extend(["-v", f"{path}:/models/target/{path.name}:ro"])
+    else:
+        command.extend(["-v", f"{target_parent}:/models/target:ro"])
     container_sidecar = ""
     if speculation_mode != "baseline" and sidecar_path is not None:
-        if sidecar_path.parent == target_parent:
+        if sidecar_path.parent == target_parent and not model.get("vision"):
             container_sidecar = f"/models/target/{sidecar_path.name}"
         else:
             command.extend(["-v", f"{sidecar_path.parent}:/models/speculation:ro"])
             container_sidecar = f"/models/speculation/{sidecar_path.name}"
+    if projector_path is not None:
+        command.extend(["-v", f"{projector_path}:/models/vision/{projector_path.name}:ro"])
     command.extend([
         image,
         "gufo", "serve",
@@ -121,6 +136,8 @@ def build_server_cmd(
         "--max-tokens", str(max_tokens),
         "--served-model-name", model["served_model_name"],
     ])
+    if projector_path is not None:
+        command.extend(["--mmproj", f"/models/vision/{projector_path.name}"])
     if thinking_effort == "off":
         command.extend(["--think", "off"])
     elif thinking_effort == "auto":

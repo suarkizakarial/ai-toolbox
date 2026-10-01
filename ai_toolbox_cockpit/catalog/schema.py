@@ -241,6 +241,27 @@ def _validate_model_entry(backend_id: str, entry: dict[str, Any], context: str) 
                 raise CatalogError(f"{context}.files.sha256 must be a SHA256 digest")
         if entry["model_path"] not in paths:
             raise CatalogError(f"{context}.model_path must be included in files")
+        vision = entry.get("vision")
+        if vision is not None:
+            vision_context = f"{context}.vision"
+            if not isinstance(vision, dict):
+                raise CatalogError(f"{vision_context} must be an object")
+            for key in ("repo", "revision", "directory", "path", "sha256"):
+                _required_string(vision, key, vision_context)
+            if vision["repo"] != entry["repo"] or vision["revision"] != entry["revision"]:
+                raise CatalogError(f"{vision_context} must match the target repository and revision")
+            for key in ("directory", "path"):
+                value = vision[key]
+                path = PurePosixPath(value)
+                if path.is_absolute() or ".." in path.parts or "\\" in value or value.startswith("-"):
+                    raise CatalogError(f"{vision_context}.{key} must be a safe relative path")
+            if vision["path"] != "mmproj-BF16.gguf":
+                raise CatalogError(f"{vision_context}.path must name the matching BF16 projector")
+            size = vision.get("size_bytes")
+            if not isinstance(size, int) or isinstance(size, bool) or size <= 0:
+                raise CatalogError(f"{vision_context}.size_bytes must be a positive integer")
+            if not re.fullmatch(r"[0-9a-f]{64}", vision["sha256"]):
+                raise CatalogError(f"{vision_context}.sha256 must be a SHA256 digest")
         speculation = entry.get("speculation")
         if speculation is not None:
             if not isinstance(speculation, dict):

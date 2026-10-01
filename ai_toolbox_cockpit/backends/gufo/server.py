@@ -30,6 +30,7 @@ class GufoServerPanel(BackendServerPanel):
         self._pending_command: list[str] = []
         self._pending_settings: dict = {}
         self._next_speculation_preference: str | None = None
+        self._next_vision_preference: str | None = None
 
     def compose(self) -> ComposeResult:
         with VerticalScroll():
@@ -47,6 +48,7 @@ class GufoServerPanel(BackendServerPanel):
                 ("model", "Model / quant"),
                 ("speculation", "Speculative decoding"),
                 ("think", "Thinking effort"),
+                ("vision", "Image input"),
             ):
                 with Horizontal(classes="inline-row"):
                     yield Label(label, id=f"gufo-{control}-label", classes="inline-label")
@@ -151,9 +153,11 @@ class GufoServerPanel(BackendServerPanel):
             if preference in {"baseline", "mtp", "dflash2", "dspark"}
             else None
         )
+        self._next_vision_preference = "on" if settings.get("vision_enabled", False) else "off"
         select.value = previous if previous in ids else next(
             entry["id"] for entry in models if entry.get("recommended")
         )
+        self._refresh_vision(self._next_vision_preference)
 
     def _refresh_speculation(self, preferred: str | None = None) -> None:
         model_id = self.query_one("#gufo-model", SearchableSelect).value
@@ -182,11 +186,31 @@ class GufoServerPanel(BackendServerPanel):
         values = {value for _, value in options}
         select.value = preferred if preferred in values else default
 
+    def _refresh_vision(self, preferred: str | None = None) -> None:
+        model_id = self.query_one("#gufo-model", SearchableSelect).value
+        try:
+            model = get_model(model_id)
+        except ValueError:
+            model = {}
+        select = self.query_one("#gufo-vision", SearchableSelect)
+        previous = select.value
+        options = [("Text only", "off")]
+        if model.get("vision"):
+            ready = resolved_files(model).get("vision") is not None
+            options.append((f"Text + images ({'projector ready' if ready else 'projector missing'})", "on"))
+        select.set_options(options)
+        select.disabled = not model.get("vision")
+        value = preferred if preferred is not None else previous
+        select.value = value if value in {v for _, v in options} else "off"
+
     @on(SearchableSelect.Changed, "#gufo-model")
     def model_changed(self, event: SearchableSelect.Changed) -> None:
         preference = self._next_speculation_preference
         self._next_speculation_preference = None
         self._refresh_speculation(preference)
+        vision_preference = self._next_vision_preference
+        self._next_vision_preference = None
+        self._refresh_vision(vision_preference)
 
     @on(Button.Pressed, "#gufo-start")
     def start_pressed(self) -> None:
@@ -210,6 +234,7 @@ class GufoServerPanel(BackendServerPanel):
             model_id = self.query_one("#gufo-model", SearchableSelect).value
             speculation_mode = self.query_one("#gufo-speculation", SearchableSelect).value
             thinking_effort = self.query_one("#gufo-think", SearchableSelect).value
+            vision_enabled = self.query_one("#gufo-vision", SearchableSelect).value == "on"
             extra_args = self.query_one("#gufo-extra-args", TextArea).text.strip()
             self._pending_command = build_server_cmd(
                 engine=engine,
@@ -226,6 +251,7 @@ class GufoServerPanel(BackendServerPanel):
                 sessions=int(values["sessions"]),
                 max_tokens=int(values["max_tokens"]),
                 thinking_effort=thinking_effort,
+                vision_enabled=vision_enabled,
                 max_pending_per_client=int(values["max_pending_per_client"]),
                 draft_tokens=int(values["draft_tokens"]),
                 extra_args=extra_args,
@@ -236,6 +262,7 @@ class GufoServerPanel(BackendServerPanel):
                 "model_id": model_id,
                 "speculation_mode": speculation_mode,
                 "thinking_effort": thinking_effort,
+                "vision_enabled": vision_enabled,
                 "extra_args": extra_args,
             }
         except (ValueError, OSError) as error:

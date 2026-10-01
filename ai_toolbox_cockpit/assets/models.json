@@ -2249,6 +2249,14 @@
             "size_bytes": 2786568256,
             "sha256": "5ff54097406a905cf3a724c709124ceb0e3e10235ee862298969e91c96fa96e6",
             "draft_tokens": 7
+          },
+          "vision": {
+            "repo": "unsloth/Qwen3.8-Flash-Next-GGUF",
+            "revision": "38bb39ee97821de2c9009abb7e93950eec396e66",
+            "directory": "Qwen3.8-Flash-Next-GGUF-Gufo/vision",
+            "path": "mmproj-BF16.gguf",
+            "size_bytes": 907542944,
+            "sha256": "2e788f8c511d8093c7b43cb87b2fd7e14228340318057f8fb20c86df2efe2355"
           }
         },
         {
@@ -2278,6 +2286,14 @@
             "size_bytes": 1143006816,
             "sha256": "1a25c56858e1ebe93f2718ac1d49d1151f9323325c1bbfd6209370f4db131ebd",
             "draft_tokens": 7
+          },
+          "vision": {
+            "repo": "unsloth/Qwen3.8-27B-GGUF",
+            "revision": "4ca720788d1e01f1bff70c033e0d0028fd02e502",
+            "directory": "Qwen3.8-27B-GGUF/vision",
+            "path": "mmproj-BF16.gguf",
+            "size_bytes": 931146432,
+            "sha256": "83ee4f4f205fa514161778c41df1ea14144faa0f713510893b63c2395f5c2d53"
           }
         },
         {
