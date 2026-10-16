@@ -57,10 +57,6 @@ class CatalogTests(unittest.TestCase):
                 "llama-hrx-staging",
                 "docker.io/kyuz0/amd-strix-halo-toolboxes:hrx-staging",
             ),
-            "strix-halo-llama-rocm-10-0-qwen-3-8-flash-next": (
-                "llama-rocm-10.0-qwen-3.8-flash-next",
-                "docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-10.0-qwen-3.8-flash-next",
-            ),
             "strix-halo-llama-rocm-10-0-engramhalo": (
                 "llama-rocm-10.0-engramhalo",
                 "docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-10.0-engramhalo",
@@ -338,16 +334,6 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(
             model["auxiliary_downloads"],
             [{
-                "name": "drluoto MTP sidecars",
-                "repo": "drluoto/Qwen3.8-Flash-Next-MTP-GGUF",
-                "role": "mtp",
-                "recommended_filename": "mtp-Qwen3.8-Flash-Next-Q8_0.gguf",
-                "description": (
-                    "External MTP heads for the Strix Halo Flash Next fork. "
-                    "Q8_0 is the ROCm-validated default; Q4_K_M and bf16 remain "
-                    "available as alternatives."
-                ),
-            }, {
                 "name": "EngramHalo Strix Halo MTP sidecar",
                 "repo": "EasiiX/Qwen3.8-Flash-Next-MTP-Strix-Halo-GGUF",
                 "role": "mtp",
@@ -469,29 +455,12 @@ class CatalogTests(unittest.TestCase):
         with self.assertRaisesRegex(CatalogError, "must declare exactly"):
             ToolboxCatalog.from_dict(data)
 
-    def test_flash_next_toolbox_recommended_use_is_strix_only_and_structured(self) -> None:
-        catalog = load_toolbox_catalog()
-        toolbox_id = "strix-halo-llama-rocm-10-0-qwen-3-8-flash-next"
-        toolbox = catalog.toolboxes[toolbox_id]
-        recommended = toolbox.backend_config["recommended_use"]
-
-        self.assertIn(toolbox_id, catalog.platform("strix-halo").toolbox_ids)
-        for platform_id in ("r9700", "gb10", "intel-b70"):
-            self.assertNotIn(toolbox_id, catalog.platform(platform_id).toolbox_ids)
-        self.assertEqual(recommended["platform_id"], "strix-halo")
-        self.assertEqual(recommended["model_filename_pattern"], "*UD-IQ4_XS*.gguf")
-        self.assertEqual(recommended["server_defaults"]["load_mode"], "dio")
-        self.assertEqual(
-            recommended["server_defaults"]["mtp"]["spec_types"],
-            ["draft-mtp", "ngram-mod"],
-        )
-
     def test_toolbox_catalog_rejects_invalid_recommended_use_load_mode(self) -> None:
         data = self.asset("toolboxes.json")
         toolbox = next(
             entry
             for entry in data["toolboxes"]
-            if entry["id"] == "strix-halo-llama-rocm-10-0-qwen-3-8-flash-next"
+            if entry["id"] == "strix-halo-llama-rocm-10-0-engramhalo"
         )
         toolbox["backend_config"]["recommended_use"]["server_defaults"][
             "load_mode"
@@ -539,7 +508,7 @@ class CatalogTests(unittest.TestCase):
         toolbox = next(
             entry
             for entry in data["toolboxes"]
-            if entry["id"] == "strix-halo-llama-rocm-10-0-qwen-3-8-flash-next"
+            if entry["id"] == "strix-halo-llama-rocm-10-0-engramhalo"
         )
         recommended = toolbox["backend_config"]["recommended_use"]
         recommended.pop("sidecar")
