@@ -16,7 +16,7 @@ Choose the hardware platform once, then use one cockpit to:
 
 "The cockpit does not treat these backends as interchangeable. Each backend owns its own model semantics, server shape, validation rules, and command builder. Shared container behavior is centralized in a single runtime layer."
 
-If you want, I can also give you:
+If you want, give you:
 
 a more punchy marketing version
 a more technical/architectural version
