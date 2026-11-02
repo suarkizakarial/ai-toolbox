@@ -14,7 +14,13 @@ Choose the hardware platform once, then use one cockpit to:
 - open ComfyUI's workflow-aware model manager;
 - configure and launch llama.cpp, DS4, Gufo, R9V, vLLM, ComfyUI, or Halogen Flash servers.
 
-The cockpit does not pretend these backends are interchangeable. Each backend owns its model semantics, server form, validation, and command builder. Shared container behavior lives in one runtime layer.
+"The cockpit does not treat these backends as interchangeable. Each backend owns its own model semantics, server shape, validation rules, and command builder. Shared container behavior is centralized in a single runtime layer."
+
+If you want, I can also give you:
+
+a more punchy marketing version
+a more technical/architectural version
+a more concise README-ready version with matching tone to the rest of the document.
 
 ## Install
 
